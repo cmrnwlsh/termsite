@@ -1,0 +1,12 @@
+{
+  "home": {
+    "helloworld.txt": [
+      "hello, world"
+    ],
+    "testfile.txt": [
+      "this is the test file",
+      "multiline test"
+    ],
+    "example": "https://example.com"
+  }
+}
