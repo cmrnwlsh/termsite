@@ -1,7 +1,6 @@
 const express = require("express");
 const helmet = require('helmet');
 const morgan = require('morgan')
-const httpsRedirect = require('express-https-redirect');
 const fs = require("fs");
 const https = require("https");
 const http = require('http')
@@ -11,15 +10,18 @@ const app = express();
 const port = process.env.DEV ? 3000 : 80
 const portSecure = process.env.DEV ? 3001 : 443
 
-app.use('/static', express.static(path.join(__dirname, '/build/static')));
-
 if (!process.env.DEV) {
     app.use('/', helmet())
-    app.use('/', httpsRedirect)
+    app.use((req, res, next) => {
+        if (req.secure)
+            next();
+        else
+            res.redirect(`https://${req.headers.host}${req.url}`)
+    })
 }
 
 app.use('/', morgan('dev'))
-
+app.use('/static', express.static(path.join(__dirname, '/build/static')));
 app.get('/terminal', (req, res) => {
     res.sendFile(path.join(__dirname, '/build/index.html'))
 })
