@@ -6,17 +6,82 @@ import {Col, Container, Row} from "react-bootstrap";
 import Form from "react-bootstrap/Form";
 import files from "./files.json";
 
+const TrieNode = function(key) {
+    this.key = key;
+    this.parent = null;
+    this.children = {};
+    this.end = false
+
+    this.getWord = () => {
+        let output = [];
+        let node = this;
+
+        while (node !== null) {
+            output.unshift(node.key);
+            node = node.parent;
+        }
+
+        return output.join('');
+    }
+}
+
+const Trie = function() {
+    this.root = new TrieNode(null)
+
+    this.insert = word => {
+        let node = this.root;
+
+        for (const [i, char] of Array.from(word).entries()) {
+            if (!node.children[char]) {
+                node.children[char] = new TrieNode(char);
+                node.children[char].parent = node;
+            }
+
+            node = node.children[char];
+
+            if (i === word.length - 1)
+                node.end = true;
+        }
+    }
+
+    this.find = prefix => {
+        let node = this.root;
+        let output = [];
+
+        for(const char of prefix) {
+            if (node.children[char])
+                node = node.children[char]
+            else
+                return output
+        }
+
+        findAllWords(node, output);
+
+        return output;
+    }
+
+    const findAllWords = (node, arr) => {
+        if (node.end) {
+            arr.unshift(node.getWord());
+        }
+
+        for (const child in node.children)
+            findAllWords(node.children[child], arr)
+    }
+}
+
 const Terminal = () => {
-    const prompt = 'user@terminal:~'
-    const input = useRef('')
-    const dir = useRef('home')
-    const dirs = useRef(files)
-    const [output, setOutput] = useState(['Enter a command, type "help" for list'])
+    const prompt = 'user@terminal:~';
+    const input = useRef('');
+    const dir = useRef('home');
+    const dirs = useRef(files);
+    const [output, setOutput] = useState(['Enter a command, type "help" for list,' +
+                                                       ' press tab for autocomplete']);
     const line = arr => setOutput(arr.concat(output))
     const commands = {
         run: (linkname) => window.location.href = dirs.current[dir.current][linkname],
 
-        cls: () => setOutput(['Enter a command, type "help" for list']),
+        cls: () => setOutput(['Enter a command, type "help" for list, press tab for autocomplete']),
 
         cat: filename => filename.slice(filename.length - 4) === '.txt' && filename in dirs.current[dir.current] ?
             line([...dirs.current[dir.current][filename].reverse().map(x => '  ' + x), `cat ${filename}:`]) :
@@ -32,6 +97,27 @@ const Terminal = () => {
             'help:'])
     }
 
+    const commandTrie = new Trie()
+    const fileTrie = new Trie()
+
+    for (const command of Object.keys(commands))
+        commandTrie.insert(command)
+
+    for (const file of Object.keys(dirs.current[dir.current]))
+        fileTrie.insert(file)
+
+    const autocomplete = () => {
+        const tokens = input.current.value.split(' ').filter(x => x)
+        if (tokens.length === 1)
+            if (tokens[0].slice(0, 2) === './') {
+                const result = fileTrie.find(input.current['value'].slice(2))
+                if (result.length > 1)
+                    line(['  ' + result.join(' ')])
+                else if (result.length)
+                    input.current['value'] = './' + result
+            }
+    }
+
     const parseCommand = text => {
         const command = text.split(' ');
         if (command[0].slice(0, 2) === './')
@@ -43,6 +129,8 @@ const Terminal = () => {
         else command[0] in commands ?
             commands[command[0]](...command.slice(1)) :
             line([`command not recognized: ${command}`]);
+
+        input.current['value'] = '';
     }
 
     const isMobile = useMediaQuery({query: '(max-width: 1224px)'})
@@ -69,16 +157,22 @@ const Terminal = () => {
                     <Row xs={'auto'}>
                         <Col><code>{prompt}</code></Col>
                         <Col xs={8}>
-                            <Form onSubmit={event => {
-                                parseCommand(input.current.value);
-                                input.current.value = '';
-                                event.preventDefault();
-                            }}>
-                                <Form.Control className={'text-secondary'}
-                                              style={{
+                            <Form
+                                onKeyDown={event => {
+                                    if (event.key === "Tab") {
+                                        autocomplete();
+                                        event.preventDefault();
+                                    }
+                                }}
+                                onSubmit={event => {
+                                    parseCommand(input.current.value);
+                                    event.preventDefault();
+                                }}>
+                                <Form.Control style={{
                                                   height: isMobile ? 12 : 24,
                                                   width: '99%',
-                                                  fontSize: isMobile ? '.5rem' : '1rem',}}
+                                                  fontSize: isMobile ? '.5rem' : '1rem',
+                                              }}
                                               ref={input}/>
                             </Form>
                         </Col>
@@ -91,7 +185,7 @@ const Terminal = () => {
 
 ReactDOM.createRoot(document.getElementById('root'))
     .render(
-    <React.StrictMode>
-        <Terminal />
-    </React.StrictMode>
-);
+        <React.StrictMode>
+            <Terminal/>
+        </React.StrictMode>
+    );
