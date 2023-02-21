@@ -1,12 +1,11 @@
-import React, {useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom/client';
 import 'bootswatch/dist/vapor/bootstrap.min.css'
 import {useMediaQuery} from "react-responsive";
-import {Col, Container, Row} from "react-bootstrap";
-import Form from "react-bootstrap/Form";
 import files from "./files.json";
+import {Col, Container, Form, Row} from "react-bootstrap";
 
-const TrieNode = function(key) {
+const TrieNode = function (key) {
     this.key = key;
     this.parent = null;
     this.children = {};
@@ -25,7 +24,7 @@ const TrieNode = function(key) {
     }
 }
 
-const Trie = function() {
+const Trie = function () {
     this.root = new TrieNode(null)
 
     this.insert = word => {
@@ -48,7 +47,7 @@ const Trie = function() {
         let node = this.root;
         let output = [];
 
-        for(const char of prefix) {
+        for (const char of prefix) {
             if (node.children[char])
                 node = node.children[char]
             else
@@ -56,7 +55,6 @@ const Trie = function() {
         }
 
         findAllWords(node, output);
-
         return output;
     }
 
@@ -76,8 +74,9 @@ const Terminal = () => {
     const dir = useRef('home');
     const dirs = useRef(files);
     const [output, setOutput] = useState(['Enter a command, type "help" for list,' +
-                                                       ' press tab for autocomplete']);
+    ' press tab for autocomplete']);
     const line = arr => setOutput(arr.concat(output))
+
     const commands = {
         run: (linkname) => window.location.href = dirs.current[dir.current][linkname],
 
@@ -134,6 +133,21 @@ const Terminal = () => {
     }
 
     const isMobile = useMediaQuery({query: '(max-width: 1224px)'})
+
+    useEffect(() => {
+        const documentClick = event => {
+            if (input.current && event.target !== input.current) {
+                input.current.focus();
+                event.preventDefault();
+            }
+        }
+        document.addEventListener('mousedown', documentClick)
+
+        return () => {
+            document.removeEventListener('mousedown', documentClick)
+        }
+    }, [input]);
+
     return (
         <div style={{height: '100vh', fontSize: isMobile ? '.5rem' : '1rem'}}>
             <div className={'mx-auto shadow-lg pb-5 mb-5 ml-5 bg-dark rounded'}
@@ -154,29 +168,41 @@ const Terminal = () => {
                         <Row><code className={'text-success'}>{line}</code></Row>)}
                 </Container>
                 <Container>
-                    <Row xs={'auto'}>
-                        <Col><code>{prompt}</code></Col>
-                        <Col xs={8}>
-                            <Form
-                                onKeyDown={event => {
-                                    if (event.key === "Tab") {
-                                        autocomplete();
-                                        event.preventDefault();
-                                    }
-                                }}
-                                onSubmit={event => {
-                                    parseCommand(input.current.value);
-                                    event.preventDefault();
+                    <Form
+                        onKeyDown={event => {
+                            if (event.key === "Tab") {
+                                autocomplete();
+                                event.preventDefault();
+                            }
+                        }}
+                        onSubmit={event => {
+                            parseCommand(input.current.value);
+                            event.preventDefault();
+                        }}>
+                        <Form.Group as={Row} className={'text-success'}>
+                            <Form.Label
+                                column xs={1}
+                                style={{
+                                    width: isMobile ? '3.1rem' : '6.8rem'
+                                }}>{prompt}
+                            </Form.Label>
+                            <Col
+                                style={{
+                                    display: 'flex',
+                                    flexWrap: 'nowrap'
                                 }}>
-                                <Form.Control style={{
-                                                  height: isMobile ? 12 : 24,
-                                                  width: '99%',
-                                                  fontSize: isMobile ? '.5rem' : '1rem',
-                                              }}
-                                              ref={input}/>
-                            </Form>
-                        </Col>
-                    </Row>
+                                <Form.Control
+                                    maxLength={80}
+                                    className={'shadow-none text-success'}
+                                    style={{
+                                        fontSize: isMobile ? '.5rem' : '1rem',
+                                        background: 'transparent',
+                                        border: 'none'
+                                    }}
+                                    ref={input}/>
+                            </Col>
+                        </Form.Group>
+                    </Form>
                 </Container>
             </div>
         </div>
