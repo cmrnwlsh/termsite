@@ -110,11 +110,32 @@ const Terminal = () => {
         if (tokens.length === 1)
             if (tokens[0].slice(0, 2) === './') {
                 const result = fileTrie.find(input.current['value'].slice(2))
+                    .filter(x => x.slice(-4) !== '.txt');
                 if (result.length > 1)
-                    line(['  ' + result.join(' ')])
+                    line(['  ' + result.join(' ')]);
                 else if (result.length)
-                    input.current['value'] = './' + result
+                    input.current['value'] = './' + result;
             }
+            else if (tokens[0] === 'cat') {
+                const result = fileTrie.find('').filter(x => x.slice(-4) === '.txt')
+                line(['  ' + result.join(' ')])
+            }
+            else {
+                const result = commandTrie.find(tokens[0])
+                if (result.length > 1)
+                    line(['  ' + result.join(' ')]);
+                else if (result.length)
+                    input.current['value'] = result;
+            }
+        else if (tokens.length === 2)
+            if(tokens[0] === 'cat') {
+                const result = fileTrie.find(tokens[1])
+                if (result.length > 1)
+                    line(['  ' + result.join(' ')]);
+                else if (result.length)
+                    input.current['value'] = tokens[0] + ' ' + result
+            }
+
     }
 
     const parseCommand = text => {
